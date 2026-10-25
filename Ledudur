@@ -1,58 +1,141 @@
-# ⬜ Snippet 1: State Initialization and Floating Toggle Setup
-import streamlit as st
+-- ⬜ Snippet 1: Floating Draggable Toggle Button
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
 
-st.set_page_config(page_title="Mobile LLM GUI", layout="centered")
+local player = Players.LocalPlayer
+local guiParent = RunService:IsStudio() and player:WaitForChild("PlayerGui") or CoreGui
 
-# Initialize session state for toggling the GUI visibility
-if "show_gui" not in st.session_state:
-    st.session_state.show_gui = False
+-- 1. ScreenGui for the Toggle
+local toggleGui = Instance.new("ScreenGui")
+toggleGui.Name = "LLMToggleGui"
+toggleGui.ResetOnSpawn = false
+toggleGui.Parent = guiParent
 
-# Create a floating toggle mechanism using columns/sidebar for mobile friendliness
-st.markdown("""
-    <style>
-        .floating-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-        }
-    </style>
-""", unsafe_allow_html=True)
+-- 2. Draggable Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 50, 0, 50)
+toggleBtn.Position = UDim2.new(0, 30, 0, 30)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Text = "🤖"
+toggleBtn.TextSize = 22
+toggleBtn.Parent = toggleGui
 
-# Toggle state button acting as the floating controller
-with st.container():
-    st.markdown('<div class="floating-container">', unsafe_allow_html=True)
-    toggle_label = "❌ Close AI" if st.session_state.show_gui else "🤖 Open AI"
-    if st.button(toggle_label, type="primary", use_container_width=False):
-        st.session_state.show_gui = not st.session_state.show_gui
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-# ⬜ Snippet 2: Main Responsive LLM Chat Interface Logic
-if st.session_state.show_gui:
-    st.markdown("### 💬 Mobile LLM Chat Interface")
-    
-    # Initialize message history if it doesn't exist
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Hello! How can I help you today?"}
-        ]
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0) -- Circular button
+corner.Parent = toggleBtn
 
-    # Display chat history containers (fully responsive for mobile screens)
-    chat_container = st.container()
-    with chat_container:
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+-- 3. Dragging Logic for Mobile & PC
+local dragging, dragInput, dragStart, startPos
 
-    # Mobile-friendly chat input box at the bottom
-    if prompt := st.chat_input("Type your message here..."):
-        # Append user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = toggleBtn.Position
+		
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
 
-        # Simulate assistant response pipeline
-        with st.chat_message("assistant"):
-            response_text = f"Echo: {prompt}"
-            st.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		toggleBtn.Position = UDim2.new(
+			startPos.X.Scale, 
+			startPos.X.Offset + delta.X, 
+			startPos.Y.Scale, 
+			startPos.Y.Offset + delta.Y
+		)
+	end
+end)
+
+-- ⬜ Snippet 2: Main LLM Chat GUI Window & State Link
+local HttpService = game:GetService("HttpService")
+
+-- 1. Main Chat ScreenGui
+local chatGui = Instance.new("ScreenGui")
+chatGui.Name = "LLMChatGui"
+chatGui.ResetOnSpawn = false
+chatGui.Enabled = false -- Hidden by default
+chatGui.Parent = guiParent
+
+-- 2. Main Window Frame
+local window = Instance.new("Frame")
+window.Size = UDim2.new(0, 320, 0, 400)
+window.Position = UDim2.new(0, 100, 0, 100)
+window.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+window.BorderSizePixel = 0
+window.Parent = chatGui
+
+local windowCorner = Instance.new("UICorner")
+windowCorner.CornerRadius = UDim.new(0, 10)
+windowCorner.Parent = window
+
+-- 3. Chat Input Box
+local textBox = Instance.new("TextBox")
+textBox.Size = UDim2.new(0, 280, 0, 35)
+textBox.Position = UDim2.new(0, 20, 0, 345)
+textBox.PlaceholderText = "Type message..."
+textBox.Text = ""
+textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+textBox.TextSize = 14
+textBox.Parent = window
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 6)
+boxCorner.Parent = textBox
+
+-- 4. Chat Log ScrollingFrame (Messages view)
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(0, 280, 0, 310)
+scrollFrame.Position = UDim2.new(0, 20, 0, 20)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
+scrollFrame.Parent = window
+
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0, 5)
+uiList.Parent = scrollFrame
+
+-- 5. Toggle Button Link (Opens/Closes Main Window)
+toggleBtn.MouseButton1Click:Connect(function()
+	chatGui.Enabled = not chatGui.Enabled
+end)
+
+-- 6. Simple Message Sender Mockup
+textBox.FocusLost:Connect(function(enterPressed)
+	if enterPressed and textBox.Text ~= "" then
+		local userMsg = textBox.Text
+		textBox.Text = ""
+		
+		-- Display user text bubble
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, 0, 0, 25)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.fromRGB(200, 200, 255)
+		label.TextSize = 13
+		label.TextXAlignment = Enum.TextXAlignment.Left
+		label.Text = "You: " .. userMsg
+		label.Parent = scrollFrame
+		
+		-- Mock LLM Response
+		task.delay(0.5, function()
+			local aiLabel = Instance.new("TextLabel")
+			aiLabel.Size = UDim2.new(1, 0, 0, 25)
+			aiLabel.BackgroundTransparency = 1
+			aiLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+			aiLabel.TextSize = 13
+			aiLabel.TextXAlignment = Enum.TextXAlignment.Left
+			aiLabel.Text = "AI: Echo -> " .. userMsg
+			aiLabel.Parent = scrollFrame
+		end)
+	end
+end)
