@@ -56,7 +56,7 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- ⬜ Snippet 2: Main LLM Chat GUI Window & State Link
+-- ⬜ Snippet 2 (Corrected): Centered Responsive LLM Chat GUI Window
 local HttpService = game:GetService("HttpService")
 
 -- 1. Main Chat ScreenGui
@@ -66,11 +66,12 @@ chatGui.ResetOnSpawn = false
 chatGui.Enabled = false -- Hidden by default
 chatGui.Parent = guiParent
 
--- 2. Main Window Frame
+-- 2. Main Window Frame (Centered on Screen)
 local window = Instance.new("Frame")
-window.Size = UDim2.new(0, 320, 0, 400)
-window.Position = UDim2.new(0, 100, 0, 100)
-window.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+window.Size = UDim2.new(0, 300, 0, 380)
+window.AnchorPoint = Vector2.new(0.5, 0.5)
+window.Position = UDim2.new(0.5, 0, 0.5, 0) -- Perfect center
+window.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 window.BorderSizePixel = 0
 window.Parent = chatGui
 
@@ -78,33 +79,47 @@ local windowCorner = Instance.new("UICorner")
 windowCorner.CornerRadius = UDim.new(0, 10)
 windowCorner.Parent = window
 
--- 3. Chat Input Box
+-- 3. Chat Log ScrollingFrame (Messages view)
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -20, 1, -70)
+scrollFrame.Position = UDim2.new(0, 10, 0, 10)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scrollFrame.Parent = window
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 6)
+scrollCorner.Parent = scrollFrame
+
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0, 6)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Parent = scrollFrame
+
+local uiPadding = Instance.new("UIPadding")
+uiPadding.PaddingTop = UDim.new(0, 8)
+uiPadding.PaddingBottom = UDim.new(0, 8)
+uiPadding.PaddingLeft = UDim.new(0, 8)
+uiPadding.PaddingRight = UDim.new(0, 8)
+uiPadding.Parent = scrollFrame
+
+-- 4. Chat Input Box (Fixed at bottom of window)
 local textBox = Instance.new("TextBox")
-textBox.Size = UDim2.new(0, 280, 0, 35)
-textBox.Position = UDim2.new(0, 20, 0, 345)
+textBox.Size = UDim2.new(1, -20, 0, 40)
+textBox.Position = UDim2.new(0, 10, 1, -50)
 textBox.PlaceholderText = "Type message..."
 textBox.Text = ""
 textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-textBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+textBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+textBox.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
 textBox.TextSize = 14
 textBox.Parent = window
 
 local boxCorner = Instance.new("UICorner")
 boxCorner.CornerRadius = UDim.new(0, 6)
 boxCorner.Parent = textBox
-
--- 4. Chat Log ScrollingFrame (Messages view)
-local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(0, 280, 0, 310)
-scrollFrame.Position = UDim2.new(0, 20, 0, 20)
-scrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-scrollFrame.BorderSizePixel = 0
-scrollFrame.CanvasSize = UDim2.new(0, 0, 2, 0)
-scrollFrame.Parent = window
-
-local uiList = Instance.new("UIListLayout")
-uiList.Padding = UDim.new(0, 5)
-uiList.Parent = scrollFrame
 
 -- 5. Toggle Button Link (Opens/Closes Main Window)
 toggleBtn.MouseButton1Click:Connect(function()
@@ -119,10 +134,11 @@ textBox.FocusLost:Connect(function(enterPressed)
 		
 		-- Display user text bubble
 		local label = Instance.new("TextLabel")
-		label.Size = UDim2.new(1, 0, 0, 25)
+		label.Size = UDim2.new(1, 0, 0, 30)
 		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.fromRGB(200, 200, 255)
+		label.TextColor3 = Color3.fromRGB(200, 220, 255)
 		label.TextSize = 13
+		label.TextWrapped = true
 		label.TextXAlignment = Enum.TextXAlignment.Left
 		label.Text = "You: " .. userMsg
 		label.Parent = scrollFrame
@@ -130,10 +146,11 @@ textBox.FocusLost:Connect(function(enterPressed)
 		-- Mock LLM Response
 		task.delay(0.5, function()
 			local aiLabel = Instance.new("TextLabel")
-			aiLabel.Size = UDim2.new(1, 0, 0, 25)
+			aiLabel.Size = UDim2.new(1, 0, 0, 30)
 			aiLabel.BackgroundTransparency = 1
-			aiLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+			aiLabel.TextColor3 = Color3.fromRGB(100, 255, 150)
 			aiLabel.TextSize = 13
+			aiLabel.TextWrapped = true
 			aiLabel.TextXAlignment = Enum.TextXAlignment.Left
 			aiLabel.Text = "AI: Echo -> " .. userMsg
 			aiLabel.Parent = scrollFrame
